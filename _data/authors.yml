@@ -6,6 +6,10 @@
 #   url: {homepage_of_author}
 # -------------------------------------
 
+TaemHam:
+  name: Taemin Kim
+  url: https://github.com/TaemHam/
+
 cotes:
   name: Cotes Chung
   twitter: cotes2020
