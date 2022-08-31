@@ -2,9 +2,8 @@
 title: "[알고리즘|파이썬] 2차원 그래프 탐색을 빠르게 돌리는 법"
 author: TaemHam
 date: 2022-08-31 16:32:00 +0900
-categories: [Algorithm, Source Code]
+categories: [Algorithm, How To]
 tags: [Algorithm, Python, Pypy, Graph Search, DFS, BFS, Matrix]
-render_with_liquid: false
 ---
 
 ## 개요
