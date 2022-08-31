@@ -89,14 +89,16 @@ avatar: '/pics/TaemHam_Face.png'
 toc: true
 
 comments:
-  active: disqus # The global switch for posts comments, e.g., 'disqus'.  Keep it empty means disable
+  active: utterances # The global switch for posts comments, e.g., 'disqus'.  Keep it empty means disable
   # The active options are as follows:
-  disqus:
-    shortname: taemham   # fill with the Disqus shortname. › https://help.disqus.com/en/articles/1717111-what-s-a-shortname
+  # disqus:
+  #   shortname: taemham   # fill with the Disqus shortname. › https://help.disqus.com/en/articles/1717111-what-s-a-shortname
   # utterances settings › https://utteranc.es/
-  # utterances:
-  #   repo:         # <gh-username>/<repo>
-  #   issue_term:   # < url | pathname | title | ...>
+  utterances:
+    repo: "TaemHam/Taemham.github.io"   # <gh-username>/<repo>
+    issue_term: "pathname" # < url | pathname | title | ...>
+    theme: "github-light"
+    crossorigin: "anonymous"
   # Giscus options › https://giscus.app
   # giscus:
   #   repo:             # <gh-username>/<repo>
