@@ -1,7 +1,7 @@
 ---
-title: "[알고리즘] 2차원 그래프를 빠르게 탐색 하는 법"
+title: "[알고리즘|파이썬] 2차원 그래프 탐색을 빠르게 돌리는 법"
 author: TaemHam
-date: 2022-08-31 11:22:00 +0900
+date: 2022-08-31 16:32:00 +0900
 categories: [Algorithm, Source Code]
 tags: [Algorithm, Python, Pypy, Graph Search, DFS, BFS, Matrix]
 render_with_liquid: false
@@ -112,7 +112,7 @@ print(f'1차원 그래프 BFS 실행 시간: {fin1D - ini1D} sec')
 
 이렇게 하면 각 칸의 좌표 값은 열값(`y`)에 좌표의 행값 과 마진을 포함한 열의 칸수의 곱(`x*L`)을 더한 값이 된다. 이 상태에서 for문을 사용해 마진칸을 제외하고 입력을 받으려면 `for x in range(0, R*L, L):` 에 `graph[x:x+C] = map(int, input().split())` 을 사용하면 된다. 만약 문제 조건에 의해 모든 칸을 한 번씩 탐색해야 할 때는, 앞의 for문에 이중 포문으로 `for xy in range(x, x+C):` 를 더해 나오는 좌표값 xy를 탐색하면 된다. 
 
-아래는 [7576: 토마토(https://www.acmicpc.net/problem/7576)]문제로 작성한 예시이다. 해당 문제의 경우 입력 배열 자체를 방문 배열로 사용 가능하기 때문에, 방문 배열을 선언하지 않아도 되지만, 설명을 위해 선언한 예시를 보여주겠다.
+아래는 [7576: 토마토](https://www.acmicpc.net/problem/7576)문제로 작성한 예시이다. 해당 문제의 경우 입력 배열 자체를 방문 배열로 사용 가능하기 때문에, 방문 배열을 선언하지 않아도 되지만, 설명을 위해 선언한 예시를 보여주겠다.
 
 ```python
 import sys
