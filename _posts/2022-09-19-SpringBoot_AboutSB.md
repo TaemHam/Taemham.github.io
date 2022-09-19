@@ -1,7 +1,7 @@
 ---
 title: "[백엔드|스프링부트] 스프링부트란?"
 author: TaemHam
-date: 2019-09-19 22:20:00 +0900
+date: 2022-09-19 22:20:00 +0900
 categories: [Backend, SpringBoot]
 tags: [Tutorial, Backend, Spring, SpringBoot, Java]
 ---
