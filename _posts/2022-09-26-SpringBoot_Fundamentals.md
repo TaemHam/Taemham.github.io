@@ -1,7 +1,7 @@
 ---
 title: "[백엔드|스프링부트] 스프링 기본 개념"
 author: TaemHam
-date: 2022-09-26 21:10:00 +0900
+date: 2022-09-26 17:50:00 +0900
 categories: [Backend, SpringBoot]
 tags: [Tutorial, Backend, Spring, SpringBoot, Java]
 ---
@@ -181,7 +181,3 @@ GoF 디자인 패턴은 생성 패턴, 구조 패턴, 행위 패턴 총 세 가�
 [^5]: <https://velog.io/@woply/spring-%EC%8A%A4%ED%94%84%EB%A7%81-MVC%EC%9D%98-%EC%A0%84%EC%B2%B4-%EA%B5%AC%EC%A1%B0-%EC%9D%B4%ED%95%B4%ED%95%98%EA%B8%B0>
 [^6]: <https://springsource.tistory.com/3>
 [^7]: <https://sites.google.com/site/telosystutorial/springmvc-jpa-springdatajpa/presentation/architecture>
-[^8]: <>
-[^9]: <>
-[^10]: <>
-[^11]: <>
