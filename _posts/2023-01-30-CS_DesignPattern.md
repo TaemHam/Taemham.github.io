@@ -189,7 +189,7 @@ public class CoffeeTest{
 
 #### 개념
 
-행위 패턴 중 하나인 전략 패턴은 실행(런타임) 중에 알고리즘 전략(기능, 동작)을 선택하여 객체 동작을 실시간으로 바뀌도록 할 수 있게 하는 행위 디자인 패턴이다. 이는 같은 문제를 해결하는 여러 알고리즘을 클래스별로 캡슐화 해 놓고, 이들이 필요할 때 교체할 수 있도록 하는 방식으로 구현한다.
+행위 패턴 중 하나인 전략 패턴(Strategy pattern)은 실행(런타임) 중에 알고리즘 전략(기능, 동작)을 선택하여 객체 동작을 실시간으로 바뀌도록 할 수 있게 하는 행위 디자인 패턴이다. 같은 문제를 해결하는 여러 알고리즘을 클래스별로 캡슐화 해 놓고, 이들이 필요할 때 교체할 수 있도록 하는 방식으로 구현한다.
 
 #### 사용
 
@@ -288,6 +288,112 @@ class User {
 ```
 
 예제 코드를 보면 알 수 있듯이, 전략 패턴을 이용하면 카드사 정책에 따라 필요한 정보를 다르게 받을 수 있다. 또, 만약 다른 카드를 추가하고 싶으면 `PaymentStrategy`를 상속받아 쉽게 추가 가능하다.
+
+### 옵저버 패턴
+
+#### 개념
+
+옵저버 패턴(Observer Pattern)은 특정 주체가 다른 객체의 상태 변화를 관찰하다가, **상태 변화가 생기면 옵저버들에게 변화를 알려주는 디자인 패턴**이다. 
+
+#### 사용
+
+알림 기능, MVC 패턴
+
+#### 구현
+
+```java
+// 주체의 기능 정의
+public interface Subject {
+    public void register(Observer obj);
+    public void unregister(Observer obj);
+    public void notify();
+    public Object getUpdate();
+}
+
+// 객체의 기능 정의
+public interface Observer {
+    public void update();
+}
+
+// 특정 주제에 대한 옵저버들을 관리
+class Topic implements Subject {
+
+    private List<Observer> observers;
+    private String message;
+
+    public Topic() {
+        this.observers = new ArrayList<>();
+        this.message = "";
+    }
+
+    // 옵저버 추가
+    @Override
+    public void register(Observer obj) {
+        if (!observers.contains(obj)) {
+            observers.add(obj);
+        }
+    }
+
+    // 옵저버 제거
+    @Override
+    public void unregister(Observer obj) {
+        observers.remove(obj);
+    }
+
+    // 옵저버에게 알림
+    @Override
+    public void notify() {
+        this.observers.forEach(Observer::update);
+    }
+
+    // 업데이트 내역 받기
+    @Override
+    public String getUpdate() {
+        return this.message;
+    }
+
+    // 업데이트 하기
+    public void postMessage(String msg) {
+        this.message = msg;
+        notify();
+    }
+}
+
+// 
+class TopicSubscriber implements Observer {
+    private String name;
+    private Subject topic;
+
+    public TopicSubscriber(String name, Subject topic) {
+        this.name = name;
+        this.topic = topic;
+    }
+
+    // 위의 notify 에서 호출되면, topic으로부터 업데이트 내역을 받는다.
+    @Override
+    public void update() {
+        String message = topic.getUpdate();
+        System.out.println(name + " 유저가 받은 메시지: " + message)
+    }
+}
+
+public class Test {
+    public static void main(String[] args) {
+        Topic topic = new Topic();
+        Observer a = new TopicSubscriber("A", topic);
+        Observer b = new TopicSubscriber("B", topic);
+        Observer c = new TopicSubscriber("C", topic);
+
+        topic.register(a);
+        topic.register(b);
+        topic.register(c);
+
+        topic.postMessage("Hello world!")
+    }
+}
+```
+
+특정 Topic에 대한 업데이트를 감지하고 전달하는 옵저버 패턴이다. `class Topic implements Subject` 를 통해 Subject interface를 구현했고, `Observer a = new TopicSubscriber("A", topic);` 으로 옵저버를 선언할 때 해당 이름과 어떤 토픽의 옵저버가 될 것인지 정했다.
 
 ## 참고 자료
 
