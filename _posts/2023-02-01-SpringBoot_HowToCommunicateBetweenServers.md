@@ -391,22 +391,22 @@ public class Server1Service {
 
 1. 먼저 WebClient 객체를 생성한다. WebClient는 `.builder()` 와 `.create()`, 두 가지 방법으로 생성할 수 있다.
 
-create 방식은 기본 설정값으로 객체를 생성하지만,
-builder 방식은 빌더 패턴으로 작동해 설정값을 직접 넣어줄 수 있다.
+    create 방식은 기본 설정값으로 객체를 생성하지만,
+    builder 방식은 빌더 패턴으로 작동해 설정값을 직접 넣어줄 수 있다.
 
-builder 사용법은 `.baseUrl()` 메서드에서 기본 URL을 설정한 후 다음과 같은 메서드들을 통해 확장한다:
-* `.defaultHeader()`: 기본 헤더 설정
-* `.defaultCookie()`: 기본 쿠키 설정
-* `.defaultUriVariable()`: 기본 URI 확장값 설정
-* `.filter()`: WebClient에서 발생하는 요청에 대한 필터 설정
+    builder 사용법은 `.baseUrl()` 메서드에서 기본 URL을 설정한 후 다음과 같은 메서드들을 통해 확장한다:
+    * `.defaultHeader()`: 기본 헤더 설정
+    * `.defaultCookie()`: 기본 쿠키 설정
+    * `.defaultUriVariable()`: 기본 URI 확장값 설정
+    * `.filter()`: WebClient에서 발생하는 요청에 대한 필터 설정
 
 2. 생성된 객체에서 요청에 사용할 HTTP 메서드에 따라 `.get()`, `.post()`, `.put()`, `.delete()` 를 호출한다.
 
 3. 다음 uri 메서드로 접근하고자 하는 URI를 설정한다. 기본적으로 String 형식으로 입력 할 수 있지만, uriBuilder를 사용해 전달할 수도 있다. 
 
 4. 응답 결과를 가져오는 방법도 `.retrieve()` 와 `.exchange()` 가 있다.
-retrieve 를 이용하면 바로 ResponseBody를 처리 할 수 있지만,
-exchange 를 이용하면 응답 코드에 따른 결괏값을 다르게 설정하는 등 세세한 컨트롤이 가능하다.
+    retrieve 를 이용하면 바로 ResponseBody를 처리 할 수 있지만,
+    exchange 를 이용하면 응답 코드에 따른 결괏값을 다르게 설정하는 등 세세한 컨트롤이 가능하다.
 
 5. 가져온 응답 결과에 `.toEntity()`를 호출해 어떤 타입으로 변환할지 정한다.
 
