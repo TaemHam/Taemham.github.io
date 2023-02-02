@@ -1,15 +1,16 @@
 ---
 title: "[백엔드|스프링부트] 서버와 서버사이 요청은 어떻게 주고 받을까?"
 author: TaemHam
-date: 2023-01-30 09:00:00 +0900
+date: 2023-02-01 09:00:00 +0900
 categories: [Backend, SpringBoot]
-tags: [Tutorial, Backend, Spring, SpringBoot, Java, RestTemplate]
+tags: [Tutorial, Backend, Spring, SpringBoot, Java, RestTemplate, WebClient]
 ---
+
 ![모놀리식vs마이크로서비스](https://shareditassets.s3.ap-northeast-2.amazonaws.com/production/uploads/upload_file/file/6913/8.%EB%A7%88%EC%9D%B4%ED%81%AC%EB%A1%9C_%EB%AA%A8%EB%86%80%EB%A6%AD_%EB%B9%84%EA%B5%90.png)
 
 ## 개요
 
-지금까지 공부해왔던 웹 API는 클라이언트에서 데이터가 필요하면, 서버 하나에서 응답에 필요한 데이터를 지지고 볶아 내어주는 "모놀리식 아키텍처(Monolithic Architecture)" 로 구현해왔다. 하지만 최근에 개발되는 서비스들은 서로 다른 데이터를 처리하는 서버를 여러 개 두고 서버끼리 통신해 데이터를 만들어나가는 "마이크로서비스 아키텍처(Microservice Architecture)"를 주로 채택하고 있다. 그렇다는 것은 클라이언트에서 서버로 요청을 보내는 것 뿐만이 아니라 **서버에서 서버로 요청을 보낼 수 있어야 한다**는 말인데, 이런 웹 요청은 어떻게 자바 코드로 보낼 수 있을까? 스프링부트는 RestTemplate, WebClient를 통해 다른 서버로 웹 요청을 보내고 응답을 받을 수 있게 도와준다.
+지금까지 공부해왔던 웹 API는 클라이언트에서 데이터가 필요하면, 서버 하나에서 응답에 필요한 데이터를 지지고 볶아 내어주는 "모놀리식 아키텍처(Monolithic Architecture)" 로 구현해왔다. 하지만 최근에 개발되는 서비스들은 서로 다른 데이터를 처리하는 서버를 여러 개 두고 서버끼리 통신해 데이터를 만들어나가는 "마이크로서비스 아키텍처(Microservice Architecture)"를 주로 채택하고 있다. 그렇다는 것은 클라이언트에서 서버로 요청을 보내는 것 뿐만이 아니라 **서버에서 서버로 요청을 보낼 수 있어야 한다**는 말인데, 이런 웹 요청은 어떻게 자바 코드로 보낼 수 있을까? 스프링부트는 **RestTemplate, WebClient**를 통해 다른 서버로 웹 요청을 보내고 응답을 받을 수 있게 도와준다.
 
 ## Rest Template
 
@@ -236,7 +237,7 @@ public class Server1Service {
         return restTemplate.postForEntity(uri, dto, Dto.class);
     }
 
-    // 1. Header를 넣는 호출 방법
+    // 2. Header를 넣는 호출 방법
     public ResponseEntity<MemberDto> postWithHeader() {
 
         URI uri = UriComponentsBuilder
@@ -261,8 +262,159 @@ public class Server1Service {
 }
 ```
 
+## WebClient
+
+### 개념
+
+WebClient 역시 웹 요청을 수행하기 위해 사용되는 인터페이스이다.
+
+### 특징
+
+* 싱글 스레드 방식
+* 논블로킹(Non-Blocking) IO
+* 리액티브 스트림(Reactive Streams)의 백 프레셔를 지원
+* 함수형 API 지원 (AWS 람다)
+* 동기, 비동기 상호작용 지원
+* 스트리밍 지원
+
+### 구현
+
+* pom.xml
+
+WebClient를 사용하려면 **WebFlux 모듈에 대한 의존성을 추가**해야 한다.
+
+```xml
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-webflux</artifactId>
+</dependency>
+```
+
+* 서버1 서비스
+
+위의 서비스 코드에서 WebClient를 사용하도록 수정해 본 코드이다.
+
+```java
+@Service
+public class Server1Service {
+
+    // GET 형식의 WebClient
+
+    // 1. PathVariable 이나 파라미터를 사용하지 않는 호출 방법 (builder() 방식 사용)
+    public String getSomething() {
+        WebClient webClient = WebClient.builder() // 빌더 호출 후 메서드로 확장
+        .baseUrl("http://localhost:9090")
+        .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+        .build();
+
+        return webClient.get()
+        .uri("/api/v1/test")
+        .retrieve()
+        .bodyToMono(String.class) // 리턴타입 설정 (Mono란 데이터를 제공하는 발행자)
+        .block(); // 기본적으로 논블로킹으로 동작하므로, block() 을 통해 블로킹으로 전환
+    }
+
+    // 2. PathVariable을 사용한 호출 방법 (create() 방식 사용)
+    public String doSomethingWithPathVariable() {
+        WebClient webClient = WebClient.create("http://localhost:9090"); // 객체 생성 후
+
+        ResponseEntity<String> responseEntity = webClient.get()
+            .uri(uriBuilder -> uriBuilder.path("/api/v1/test/{variable}")
+                .build("foobar"))
+            .retrieve() // 요청에 대한 응답값 추출
+            .toEntity(String.class) // ResponseEntity 타입으로 받을 수 있음
+            .block();
+
+        return responseEntity.getBody()
+    }
+
+    // 3. 파라미터를 사용한 호출 방법
+    public String doSomethingWithParameter() {
+        WebClient webClient = WebClient.create("http://localhost:9090");
+        
+        return webClient.get().uri(uriBuilder -> uriBuilder.path("/api/v1/test/param")
+            .queryParam("parameter", "foobaz")
+                .build())
+            .exchangeToMono(clientResponse -> { // exchange는 응답 결과 코드에 따라 다르게 응답을 설정하고 싶을 때 사용 가능
+                if (clientResponse.statusCode().equals(HttpStatus.OK)) {
+                    return clientResponse.bodyToMono(String.class);
+                return clientResponse.createException().flatMap(Mono::error);
+                }
+            })
+            .block();
+    }
+
+    // POST 형식의 RestTemplate
+
+    // 1. RequestBody를 넣는 호출 방법
+    public ResponseEntity<Dto> postWithBody() {
+
+        WebClient webClient = WebClient.builder()
+        .baseUrl("http://localhost:9090")
+        .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+        .build();
+
+        Dto dto = new Dto();
+        dto.setName("name");
+        dto.setEmail("email@mail.com");
+
+        return webClient.post()
+            .uri("/api/v1/test")
+            .bodyValue(dto) // bodyValue로 post와 함께 전송할 body 값 추가
+            .retrieve()
+            .toEntity(Dto.class) // Dto로 추출
+            .block();
+    }
+
+    // 2. Header를 넣는 호출 방법
+    public ResponseEntity<MemberDto> postWithHeader() {
+
+        WebClient webClient = WebClient.builder()
+        .baseUrl("http://localhost:9090")
+        .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+        .build();
+
+        Dto dto = new Dto();
+        dto.setName("name");
+        dto.setEmail("email@mail.com");
+
+        return webClient.post()
+            .uri("/api/v1/test")
+            .header("my-header", "barbaz") // header 로 헤더 추가
+            .bodyValue(dto)
+            .retrieve()
+            .toEntity(Dto.class)
+            .block();
+    }
+}
+```
+
+1. 먼저 WebClient 객체를 생성한다. WebClient는 `.builder()` 와 `.create()`, 두 가지 방법으로 생성할 수 있다.
+
+create 방식은 기본 설정값으로 객체를 생성하지만,
+builder 방식은 빌더 패턴으로 작동해 설정값을 직접 넣어줄 수 있다.
+
+builder 사용법은 `.baseUrl()` 메서드에서 기본 URL을 설정한 후 다음과 같은 메서드들을 통해 확장한다:
+* `.defaultHeader()`: 기본 헤더 설정
+* `.defaultCookie()`: 기본 쿠키 설정
+* `.defaultUriVariable()`: 기본 URI 확장값 설정
+* `.filter()`: WebClient에서 발생하는 요청에 대한 필터 설정
+
+2. 생성된 객체에서 요청에 사용할 HTTP 메서드에 따라 `.get()`, `.post()`, `.put()`, `.delete()` 를 호출한다.
+
+3. 다음 uri 메서드로 접근하고자 하는 URI를 설정한다. 기본적으로 String 형식으로 입력 할 수 있지만, uriBuilder를 사용해 전달할 수도 있다. 
+
+4. 응답 결과를 가져오는 방법도 `.retrieve()` 와 `.exchange()` 가 있다.
+retrieve 를 이용하면 바로 ResponseBody를 처리 할 수 있지만,
+exchange 를 이용하면 응답 코드에 따른 결괏값을 다르게 설정하는 등 세세한 컨트롤이 가능하다.
+
+5. 가져온 응답 결과에 `.toEntity()`를 호출해 어떤 타입으로 변환할지 정한다.
+
+6. 만약 블로킹 구조로 동작하게 하려면 `.block()` 메서드를 추가해주면 된다.
+
 ## 참고 자료
 ***
 
 * [스프링 RestTemplate 정리(요청 함)](https://velog.io/@soosungp33/%EC%8A%A4%ED%94%84%EB%A7%81-RestTemplate-%EC%A0%95%EB%A6%AC%EC%9A%94%EC%B2%AD-%ED%95%A8)
 * [Spring-boot 공부 8 - RestTemplate(Server to Server 간의 통신)](https://ugo04.tistory.com/93)
+* [Spring 5 WebClient](https://www.baeldung.com/spring-5-webclient)
