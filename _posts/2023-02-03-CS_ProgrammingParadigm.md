@@ -58,14 +58,19 @@ tags: [CS, Programming Paradigm]
 위에서 언급한 특징을 지니게 하려면 다섯 가지 설계 원칙을 지켜야 하는데, 이 다섯가지 원칙의 영어 이니셜을 따와 SOLID 원칙이라고 부른다.
 
 * Single Responsibility Principle(단일 책임 원칙, SRP)
+
     모든 클래스는 각각 하나의 책임만 가져야 한다는 원칙이다. 각각 기능A와 기능B를 위해 만들어진 클래스1과 클래스2가 있다고 할 때, 기능B의 수정이 클래스2에서 일어난다 해도 클래스1에서는 수정이 일어나지 않도록 설계하는 것이다.
 * Open Closed Principle(개방 폐쇄 원칙, OCP)
+
     수정에는 닫혀있고, 확장에는 열려있도록 해야 한다는 원칙이다. 어떤 기능을 추가할 때 기존 코드를 수정하지 않고도 추가할 수 있게 설계하는 것이다.
 * Liskov Substitution Principle(리스코프 치환 원칙, LSP)
+
     상위 클래스를 상속받은 하위 클래스는 상위 클래스의 자리에 대신해 들어가도 문제없이 작동할 수 있도록 만들어야 한다는 원칙이다. 
 * Interface Segregation Principle(인터페이스 분리 원칙, ISP)
+
     하나의 일반적인 인터페이스보다, 구체적인 여러 개의 인터페이스를 만들어야 한다는 원칙이다. 인터페이스를 너무 범용적으로 만들어서 사용하지도 않는 메서드를 구현하지 않도록, 인터페이스를 작고 구체적이게 설계하는 것이다.
 * Dependency Inversion Principle(의존 역전 원칙, DIP)
+
     상위 패키지가 변하기 쉬운 하위 패키지를 의존하지 않도록 만들어야 한다는 원칙이다. 인터페이스는 상위 패키지에, 그 구현체는 하위 패키지에 두어 인터페이스가 하위 패키지에서 구현되도록 설계하는 것이다. 이렇게 만들면 하위 패키지에 수정이 필요해도, 하위 패키지를 직접 수정하지 않고 새로운 패키지를 만들어 갈아 끼울 수 있다.
 
 #### 대표 언어
@@ -108,9 +113,9 @@ tags: [CS, Programming Paradigm]
 <details>
 <summary>흐름</summary>
 
-1. 객체 지향 언어 설명
+1. 객체 지향이 어떤 환경에서 사용되는 언어인지 설명
 
-2. OOP 설명
+2. 해당 환경에 대해 설명
 </details>
 
 <details>
@@ -160,7 +165,7 @@ tags: [CS, Programming Paradigm]
 5. I 설명
 
 6. D 설명
-</details><details>
+</details>
 
 <details>
 <summary>답변</summary>
@@ -217,7 +222,7 @@ tags: [CS, Programming Paradigm]
 
 2. 고차 함수 설명, 고차 함수 제한 설명
 
-</details><details>
+</details>
 
 <details>
 <summary>답변</summary>
