@@ -134,44 +134,39 @@ HMACSHA256(
 
 ## 구현
 
-* UserDetails 구현체
+* UserDetails와 UserDetailsService 구현체
 
 ``` java
 @Getter
-public class CustomUserDetail implements UserDetails {
+@AllArgsConstructor
+public class CustomUserDetails implements UserDetails {
 
-    private String username,
-    private String password,
-    private Collection<? extends GrantedAuthority> authorities,
-    private String email
+    private String username;
+    private String password;
+    private String email;
+    private Collection<? extends GrantedAuthority> authorities;
 
-    public static CustomUserDetail of(String username, String password, String email) {
-        Set<RoleType> rollTypes = Set.of(RoleType.USER);
+    public static CustomUserDetails of(String username, String password, String email, UserRole role) {
+        Set<UserRole> rollTypes = Set.of(role);
 
-        return new CustomUserDetail(
+        return new CustomUserDetails(
                 username,
                 password,
+                email,
                 rollTypes.stream()
-                        .map(RoleType::getName)
+                        .map(UserRole::getName)
                         .map(SimpleGrantedAuthority::new)
-                        .collect(Collectors.toUnmodifiableSet()),
-                email
+                        .collect(Collectors.toUnmodifiableSet())
         );
     }
 
-    public static CustomUserDetail from(USerDto dto) {
-        return CustomUserDetail.of(
-                dto.userId(),
-                dto.userPassword(),
-                dto.email()
-        );
-    }
-
-    public USerDto toDto() {
-        return USerDto.of(
-                username,
-                password,
-                email
+    // 엔티티에서 UserDto로, 다시 CustomUserDetails로 바꾸기 위한 메서드
+    public static CustomUserDetails from(UserDto dto) {
+        return CustomUserDetails.of(
+                dto.getUsername(),
+                dto.getPassword(),
+                dto.getEmail(),
+                dto.getRole()
         );
     }
 
@@ -209,36 +204,132 @@ public class CustomUserDetail implements UserDetails {
     public boolean isEnabled() {
         return true;
     }
+}
+```
 
-    public enum RoleType {
-        USER("ROLE_USER"),
-        ADMIN("ROLE_ADMIN");
+CustomUserDetails 클래스는 UserDetails 인터페이스를 구현하고 있다. 위의 그림에서 설명했듯이, UserDetails는 UserDetailsService를 통해 입력된 로그인 정보를 가지고 데이터베이스에서 사용자 정보를 가져오는 역할을 수행한다.
 
-        @Getter
-        private final String name;
+```java
+@AllArgsConstructor
+public class UserDetailsServiceImpl implements UserDetailsService {
 
-        RoleType(String name) {
-            this.name = name;
+    private final UserRepository userRepository;
+
+    @Override
+    public CustomUserDetails loadUserByUsername(String username) {
+        return CustomUserDetails.from(UserDto.from(userRepository.findByUsername(username)));
+    }
+}
+```
+
+* JWTTokenProvider 구현
+
+JWTTokenProvider는 UserDetails에서 정보를 추출해 JWT 토큰을 생성하는 클래스이다. 
+
+```java
+@Component
+public class JwtTokenProvider {
+
+    private final UserDetailsService userDetailsService;
+
+    @Value("${springboot.jwt.secret}")
+    private String secretKey = "secretKey";
+    private final long TOKEN_VALID_MILLISECOND = 1000L * 60 * 60;
+
+    @Autowired
+    public JwtTokenProvider(UserDetailsService userDetailsService) {
+        this.userDetailsService = userDetailsService;
+    }
+
+
+    @PostConstruct // Bean 으로 주입되면서 실행
+    protected void init() {
+        secretKey = Base64.getEncoder().encodeToString(secretKey.getBytes(StandardCharsets.UTF_8));
+    }
+
+    // 토큰 생성
+    public String createToken(String username, Set<String> roles) {
+        Claims claims = Jwts.claims().setSubject(username);
+        claims.put("roles", roles);
+        Date now = new Date();
+
+        return Jwts.builder()
+                .setClaims(claims)
+                .setIssuedAt(now)
+                .setExpiration(new Date(now.getTime() + TOKEN_VALID_MILLISECOND))
+                .signWith(SignatureAlgorithm.HS256, secretKey)
+                .compact();
+    }
+
+    // 토큰 인증 정보 조회
+    public Authentication getAuthentication(String token) {
+        UserDetails userDetails = userDetailsService.loadUserByUsername(this.getUsername(token));
+        return new UsernamePasswordAuthenticationToken(userDetails, "", userDetails.getAuthorities());
+    }
+
+    // 토큰 기반 회원 구별 정보 추출
+    public String getUsername(String token) {
+        return Jwts.parser()
+                .setSigningKey(secretKey)
+                .parseClaimsJws(token)
+                .getBody()
+                .getSubject();
+    }
+
+    // HTTP 헤더에서 Token 값 추출
+    public String resolveToken(HttpServletRequest request) {
+        return request.getHeader("X-AUTH-TOKEN");
+    }
+
+    // 토큰 유효성 체크
+    public boolean validateToken(String token) {
+        try {
+            Jws<Claims> claims = Jwts.parser().setSigningKey(secretKey).parseClaimsJws(token);
+            return !claims.getBody().getExpiration().before(new Date());
+        } catch (Exception e) {
+            return false;
         }
     }
 }
 ```
 
-CustomUserDetail 클래스는 UserDetails 인터페이스를 구현하고 있다. UserDetails는 UserDetailsService를 통해 입력된 로그인 정보를 가지고 데이터베이스에서 사용자 정보를 가져오는 역할을 수행한다.
 
-* JWT Security Configuration
+* JWTAuthenticationFilter 구현
+
+JWTAuthenticationFilter는 헤더로 받은 JWT 토큰을 추출해 유효성을 검사하고, SecurityContextHolder에 Authentication을 부여하는 클래스이다. 
 
 ```java
+public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
+    private final JwtTokenProvider jwtTokenProvider;
+
+    @Autowired
+    public JwtAuthenticationFilter(JwtTokenProvider jwtTokenProvider) {
+        this.jwtTokenProvider = jwtTokenProvider;
+    }
+
+    @Override
+    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
+            throws ServletException, IOException {
+        // 토큰 추출
+        String token = jwtTokenProvider.resolveToken(request);
+
+        // 토큰 유효성 체크
+        if (token != null && jwtTokenProvider.validateToken(token)) {
+            Authentication authentication = jwtTokenProvider.getAuthentication(token);
+            SecurityContextHolder.getContext().setAuthentication(authentication);
+        }
+
+        filterChain.doFilter(request, response);
+    }
+}
 ```
 
-
-* Security Configuration
+* SecurityConfiguration 구현
 
 JWT를 사용하는 SecurityFilterChain은 다음과 같이 구현한다.
 
 ```java
-
 @RequiredArgsConstructor
 @Configuration
 public class SecurityConfiguration {
@@ -247,18 +338,11 @@ public class SecurityConfiguration {
     private final JwtAccessDeniedHandler jwtAccessDeniedHandler;
     private final JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
 
-
-    // DB에 비밀번호 암호화해 저장
-    @Bean
-    public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
-    }
-
     // 필터체인을 통과시키지 않을 URI 설정
     @Bean
     public WebSecurityCustomizer webSecurityCustomizer(){
         return (web) -> web.ignoring()
-                    .antMatchers("/favicon.ico");
+                .antMatchers("/favicon.ico");
     }
 
     // 필터체인 설정
@@ -290,32 +374,37 @@ public class SecurityConfiguration {
                 .accessDeniedHandler(jwtAccessDeniedHandler) // 커스텀 인가 실패 핸들링
 
                 .and()
-                
-                // JwtAuthenticationFilter 적용
-                .addFilterBefore(new JwtAuthenticationFilter(jwtTokenProvider, UsernamePasswordAuthenticationFilter.class));
 
-                .and().build();
+                // JwtAuthenticationFilter 적용
+                .addFilterBefore(new JwtAuthenticationFilter(jwtTokenProvider), UsernamePasswordAuthenticationFilter.class)
+                .build();
     }
 }
 ```
 
-1. 여기서 PasswordEncoder 를 빈으로 등록해 BcryptEncoder를 반환하는데, BcryptEncoder는 스프링 시큐리티 프레임워크에서 제공하는 클래스 중 하나로 비밀번호를 암호화하는 데 사용할 수 있는 메서드를 가진 클래스이다. 여기선 DB에 저장할 비밀번호를 암호화 해 저장하기 위해 사용됐다. 자세한 건 [여기](https://franklee0180.tistory.com/42) 참조
+WebSecurityCustomizer 는 필터체인의 앞단에 적용되며, 전체적으로 스프링 시큐리티 영향권의 밖에 있는 필터이다. 때문에 인증과 인가가 적용되지 않는 리소스 접근에 대해 사용할 수 있다. "favicon.ico" 외에도, Swagger 를 사용한다면 "/v2/api-docs", "/swagger-resource/\*\*", "/swagger-ui.html", "webjars/\*\*"를, h2 DB를 사용한다면 "/h2/\*\*" 를 추가하기도 한다.
 
-2. WebSecurityCustomizer 는 필터체인의 앞단에 적용되며, 전체적으로 스프링 시큐리티 영향권의 밖에 있는 필터이다. 때문에 인증과 인가가 적용되지 않는 리소스 접근에 대해 사용할 수 있다. "favicon.ico" 외에도, Swagger 를 사용한다면 "/v2/api-docs", "/swagger-resource/\*\*", "/swagger-ui.html", "webjars/\*\*"를, h2 DB를 사용한다면 "/h2/\*\*" 를 추가하기도 한다.
+SecurityFilterChain 를 빈으로 등록해 필터체인을 설정한다. 다음은 각각의 필터에 대한 설명이다.
 
-3. SecurityFilterChain 를 빈으로 등록해 필터체인을 설정한다. 다음은 각각의 필터에 대한 설명이다.
+`csrf().disable()`: 
 
-    * `csrf().disable()`
-        스프링 시큐리티의 csrf() 메서드는 기본적으로 CSRF 토큰을 발급해 클라이언트로부터 요청을 받을 때마다 토큰을 검사하는 방식으로 진행한다. REST API 에서는 CSRF 보안이 필요 없기 때문에 비활성화 하는 로직이다. 
-    * `sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS)`
-        REST API 기반 애플리케이션의 동작 방식을 설정한다. JWT 토큰으로 인증을 처리하며 세션은 사용하지 않기 때문에 STATELESS로 설정하는 로직이다.
-    * `authorizeRequests()`
-        애플리케이션에 들어오는 요청에 대한 사용 권한을 체크한다. ansMatchers()로 URI별 설정을 하고, 나머지에 대해선 anyRequest()로 설정한다. permitAll()은 해당 요청을 모두 허용한다는 것, hasRole("[권한]")은 특정 권한에 대해서만 허용한다는 것, 그리고 authenticated()는 인증된 권한을 가진 사용자에게만 허용한다는 것이다. 
-    * `exceptionHandling().authenticationEntryPoint(jwtAuthenticationEntryPoint)`
-        인증 과정에서 예외가 발생한 경우 예외를 전달한다.
-    * `exceptionHandling().accessDeniedHandler(jwtAccessDeniedHandler)`
-        권한을 확인하는 과정에서 통과하지 못하는 예외가 발생할 경우 예외를 전달한다.
+    스프링 시큐리티의 csrf() 메서드는 기본적으로 CSRF 토큰을 발급해 클라이언트로부터 요청을 받을 때마다 토큰을 검사하는 방식으로 진행한다. REST API 에서는 CSRF 보안이 필요 없기 때문에 비활성화 하는 로직이다. 
 
+`sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS)`: 
+
+    REST API 기반 애플리케이션의 동작 방식을 설정한다. JWT 토큰으로 인증을 처리하며 세션은 사용하지 않기 때문에 STATELESS로 설정하는 로직이다.
+
+`authorizeRequests()`: 
+
+    애플리케이션에 들어오는 요청에 대한 사용 권한을 체크한다. ansMatchers()로 URI별 설정을 하고, 나머지에 대해선 anyRequest()로 설정한다. permitAll()은 해당 요청을 모두 허용한다는 것,hasRole("[권한]")은 특정 권한에 대해서만 허용한다는 것, 그리고 authenticated()는 인증된 권한을 가진 사용자에게만 허용한다는 것이다. 
+
+`exceptionHandling().authenticationEntryPoint(jwtAuthenticationEntryPoint)`: 
+
+    인증 과정에서 예외가 발생한 경우 예외를 전달한다.
+
+`exceptionHandling().accessDeniedHandler(jwtAccessDeniedHandler)`: 
+
+    권한을 확인하는 과정에서 통과하지 못하는 예외가 발생할 경우 예외를 전달한다.
 
 * 커스텀 AccessDeniedHandler, AuthenticationEntryPoint
 
@@ -326,7 +415,7 @@ public class JwtAccessDeniedHandler implements AccessDeniedHandler {
     @Override
     public void handle(HttpServletRequest request, HttpServletResponse response,
         AccessDeniedException exception) throws IOException {
-            response.sendRedirect("/exception")
+            response.sendRedirect("/exception");
         }
 }
 ```
@@ -359,7 +448,7 @@ public class EntryPointErrorResponse {
 }
 ```
 
-AuthenticationEntryPoint의 구조는 앞의 AccessDeniedHandler와 크게 다르지 않고, `commence()` 메서드를 오버라이딩 해 구현한다. 위의 예제는 예외 처리를 위해 직접 Response를 생성해 클라이언트에게 응답하는 방식으로 구현되었다. 만약 메시지를 설정할 필요가 없다면, `response.sendError()` 메서드로 인증 실패 코드만 전달할 수 있다.
+AuthenticationEntryPoint의 구조는 앞의 AccessDeniedHandler와 크게 다르지 않고, `commence()` 메서드를 오버라이딩 해 구현한다. 위의 예제는 예외 처리를 위해 직접 Response를 생성해 클라이언트에게 응답하는 방식으로 구현되었다. 만약 메시지를 설정할 필요가 없다면, 다음과 같이 `response.sendError()` 메서드로 인증 실패 코드만 전달할 수 있다.
 
 ```java
 //...
@@ -370,6 +459,227 @@ AuthenticationEntryPoint의 구조는 앞의 AccessDeniedHandler와 크게 다�
         }
 //...
 ```
+
+회원 가입과 로그인 기능의 컨트롤러와 서비스등 위의 구현 내용을 이어붙이는 것이기 때문에, 밑의 나머지 부분에 넣어 놓고 넘어가겠다.
+
+<details>
+<summary>나머지</summary>
+
+* SignService
+```java
+@Service
+@AllArgsConstructor
+public class SignServiceImpl implements SignService {
+
+    public UserRepository userRepository;
+    public JwtTokenProvider jwtTokenProvider;
+
+    // `@Configuration` 으로 BcryptEncoder를 등록시켜 주어야 한다.
+    public PasswordEncoder passwordEncoder;
+
+    @Override
+    public SignUpResponseDto signUp(String username, String password, String email, String role) {
+        SignUpResponseDto signUpResponseDto = new SignUpResponseDto();
+
+        User user = User.builder()
+                .username(username)
+                .password(passwordEncoder.encode(password))
+                .email(email)
+                .role(role.equalsIgnoreCase("admin") ? UserRole.ADMIN : UserRole.USER)
+                .build();
+
+        User savedUser = userRepository.save(user);
+
+        if (savedUser.getUsername().isEmpty()) {
+            setFailResult(signUpResponseDto);
+            return signUpResponseDto;
+        }
+        setSuccessResult(signUpResponseDto);
+        return signUpResponseDto;
+    }
+
+    @Override
+    public SignInResponseDto signIn(String username, String password) throws RuntimeException {
+        User user = userRepository.findByUsername(username);
+
+        if(!passwordEncoder.matches(password, user.getPassword())) {
+            throw new RuntimeException();
+        }
+
+        SignInResponseDto signInResponseDto = SignInResponseDto.builder()
+                .token(jwtTokenProvider.createToken(String.valueOf(user.getUsername()), Set.of(user.getRole().getName())))
+                .build();
+
+        setSuccessResult(signInResponseDto);
+        return signInResponseDto;
+    }
+
+    private void setSuccessResult(SignUpResponseDto responseDto) {
+        responseDto.setSuccess(true);
+        responseDto.setCode(0);
+        responseDto.setMessage("Success");
+    }
+
+    private void setFailResult(SignUpResponseDto responseDto) {
+        responseDto.setSuccess(false);
+        responseDto.setCode(-1);
+        responseDto.setMessage("Fail");
+    }
+}
+```
+
+* SignController
+```java
+@RestController
+@RequestMapping("/sign-api")
+@AllArgsConstructor
+public class SignController {
+
+    private final SignService signService;
+    private final Logger LOGGER = LoggerFactory.getLogger(SignController.class);
+
+    @PostMapping("/sign-in")
+    public ResponseEntity<SignInResponseDto> signIn(@RequestBody SignInRequestDto requestDto) throws RuntimeException {
+        SignInResponseDto responseDto = signService.signIn(requestDto.getUsername(), requestDto.getPassword());
+
+        return ResponseEntity.status(HttpStatus.OK).body(responseDto);
+    }
+
+    @PostMapping("sign-up")
+    public ResponseEntity<SignUpResponseDto> createProduct(@RequestBody SignUpRequestDto requestDto) {
+        SignUpResponseDto responseDto = signService.signUp(requestDto.getUsername(), requestDto.getPassword(),
+                requestDto.getEmail(), requestDto.getRole());
+
+        return ResponseEntity.status(HttpStatus.OK).body(responseDto);
+    }
+
+    @GetMapping("/exception")
+    public void exceptionTest() throws RuntimeException {
+        throw new RuntimeException("접근이 금지되었습니다.");
+    }
+
+    @ExceptionHandler(value = RuntimeException.class)
+    public ResponseEntity<Map<String, String>> ExceptionHandler(RuntimeException e) {
+//        HttpHeaders responseHeaders = new HttpHeaders();
+//        responseHeaders.add(HttpHeaders.CONTENT_TYPE, "application/json");
+
+        HttpStatus httpStatus = HttpStatus.BAD_REQUEST;
+
+        Map<String, String> map = new HashMap<>();
+        map.put("error type", httpStatus.getReasonPhrase());
+        map.put("code", "400");
+        map.put("message", "에러 발생");
+
+        return ResponseEntity.status(httpStatus).body(map);
+    }
+}
+```
+* PasswordEncoderConfiguration
+```java
+@Configuration
+public class PasswordEncoderConfiguration {
+
+
+    // DB에 비밀번호 암호화해 저장
+    @Bean
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
+    }
+}
+```
+
+* User 엔티티
+```java
+@Entity
+@Getter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+@Table
+public class User {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(nullable = false, unique = true)
+    private String username;
+
+    @JsonProperty(access = Access.WRITE_ONLY)
+    @Column(nullable = false)
+    private String password;
+
+    @Column(nullable = false)
+    private String email;
+
+    @Column(name = "role")
+    @Enumerated(EnumType.STRING)
+    private UserRole role;
+}
+```
+
+* 그 외에 사용한 DTO들
+```java
+@Getter
+@AllArgsConstructor
+public class UserDto {
+
+    private Long id;
+    private String username;
+    private String password;
+    private String email;
+    private UserRole role;
+
+    public static UserDto from(User entity) {
+        return new UserDto(
+                entity.getId(),
+                entity.getUsername(),
+                entity.getPassword(),
+                entity.getEmail(),
+                entity.getRole()
+        );
+    }
+}
+//-----
+@AllArgsConstructor
+@Getter
+public class SignInRequestDto{
+
+    private String username;
+    private String password;
+}
+//-----
+@AllArgsConstructor
+@NoArgsConstructor
+@Builder
+@Getter
+public class SignInResponseDto extends SignUpResponseDto{
+
+    private String token;
+}
+//-----
+@AllArgsConstructor
+@NoArgsConstructor
+@Getter
+public class SignUpRequestDto {
+
+    private String username;
+    private String password;
+    private String email;
+    private String role;
+}
+//-----
+@AllArgsConstructor
+@NoArgsConstructor
+@Data
+public class SignUpResponseDto {
+
+    private boolean success;
+    private int code;
+    private String message;
+}
+```
+</details>
 
 ## 마치며
 
