@@ -1,7 +1,7 @@
 ---
 title: "[백엔드|스프링부트] 서버가 사용자를 인증하는 법 (JWT를 이용한 방법)"
 author: TaemHam
-date: 2023-02-01 09:00:00 +0900
+date: 2023-02-09 09:00:00 +0900
 categories: [Backend, SpringBoot]
 tags: [Tutorial, Backend, Spring, SpringBoot, Java, SpringSecurity, JWT]
 ---
@@ -386,25 +386,15 @@ WebSecurityCustomizer 는 필터체인의 앞단에 적용되며, 전체적으�
 
 SecurityFilterChain 를 빈으로 등록해 필터체인을 설정한다. 다음은 각각의 필터에 대한 설명이다.
 
-`csrf().disable()`: 
+`csrf().disable()`: 스프링 시큐리티의 csrf() 메서드는 기본적으로 CSRF 토큰을 발급해 클라이언트로부터 요청을 받을 때마다 토큰을 검사하는 방식으로 진행한다. REST API 에서는 CSRF 보안이 필요 없기 때문에 비활성화 하는 로직이다. 
 
-    스프링 시큐리티의 csrf() 메서드는 기본적으로 CSRF 토큰을 발급해 클라이언트로부터 요청을 받을 때마다 토큰을 검사하는 방식으로 진행한다. REST API 에서는 CSRF 보안이 필요 없기 때문에 비활성화 하는 로직이다. 
+`sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS)`: REST API 기반 애플리케이션의 동작 방식을 설정한다. JWT 토큰으로 인증을 처리하며 세션은 사용하지 않기 때문에 STATELESS로 설정하는 로직이다.
 
-`sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS)`: 
+`authorizeRequests()`: 애플리케이션에 들어오는 요청에 대한 사용 권한을 체크한다. ansMatchers()로 URI별 설정을 하고, 나머지에 대해선 anyRequest()로 설정한다. permitAll()은 해당 요청을 모두 허용한다는 것,hasRole("[권한]")은 특정 권한에 대해서만 허용한다는 것, 그리고 authenticated()는 인증된 권한을 가진 사용자에게만 허용한다는 것이다. 
 
-    REST API 기반 애플리케이션의 동작 방식을 설정한다. JWT 토큰으로 인증을 처리하며 세션은 사용하지 않기 때문에 STATELESS로 설정하는 로직이다.
+`exceptionHandling().authenticationEntryPoint(jwtAuthenticationEntryPoint)`: 인증 과정에서 예외가 발생한 경우 예외를 전달한다.
 
-`authorizeRequests()`: 
-
-    애플리케이션에 들어오는 요청에 대한 사용 권한을 체크한다. ansMatchers()로 URI별 설정을 하고, 나머지에 대해선 anyRequest()로 설정한다. permitAll()은 해당 요청을 모두 허용한다는 것,hasRole("[권한]")은 특정 권한에 대해서만 허용한다는 것, 그리고 authenticated()는 인증된 권한을 가진 사용자에게만 허용한다는 것이다. 
-
-`exceptionHandling().authenticationEntryPoint(jwtAuthenticationEntryPoint)`: 
-
-    인증 과정에서 예외가 발생한 경우 예외를 전달한다.
-
-`exceptionHandling().accessDeniedHandler(jwtAccessDeniedHandler)`: 
-
-    권한을 확인하는 과정에서 통과하지 못하는 예외가 발생할 경우 예외를 전달한다.
+`exceptionHandling().accessDeniedHandler(jwtAccessDeniedHandler)`: 권한을 확인하는 과정에서 통과하지 못하는 예외가 발생할 경우 예외를 전달한다.
 
 * 커스텀 AccessDeniedHandler, AuthenticationEntryPoint
 
