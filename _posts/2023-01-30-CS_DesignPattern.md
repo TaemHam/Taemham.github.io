@@ -395,6 +395,14 @@ public class Test {
 
 특정 Topic에 대한 업데이트를 감지하고 전달하는 옵저버 패턴이다. `class Topic implements Subject` 를 통해 Subject interface를 구현했고, `Observer a = new TopicSubscriber("A", topic);` 으로 옵저버를 선언할 때 해당 이름과 어떤 토픽의 옵저버가 될 것인지 정했다.
 
+### 프록시 패턴
+
+#### 개념
+
+프록시 패턴(Proxy pattern) 은 어떤 객체에 대한 접근을 제어하는 용도로 대리인이나 대변인에 해당하는 객체를 제공하는 패턴이다. 프록시 패턴은 주로 객체 생성에 비용이 많이 들어 실제 사용 시점까지 객체 생성을 미뤄두거나, 실제 객체의 제한하기 위해 사용된다.
+
+#### 사용
+
 ## 참고 자료
 
 ***

@@ -6,7 +6,7 @@ categories: [CS, Network]
 tags: [CS, Network]
 ---
 
-![프로그래밍 패러다임](https://blog.kakaocdn.net/dn/EjKha/btqUeXDkUpM/54da0e07OWNO5ANhz5Vsu1/img.png)
+![네트워크](https://velog.velcdn.com/images/hean1103/post/81e50d98-9bc0-4ce1-a7b5-8e38568f85eb/image.png://blog.kakaocdn.net/dn/EjKha/btqUeXDkUpM/54da0e07OWNO5ANhz5Vsu1/img.png)
 
 ## 네트워크
 
