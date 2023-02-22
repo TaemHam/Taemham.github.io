@@ -456,6 +456,7 @@ AuthenticationEntryPoint의 구조는 앞의 AccessDeniedHandler와 크게 다�
 <summary>나머지</summary>
 
 * SignService
+
 ```java
 @Service
 @AllArgsConstructor
@@ -519,6 +520,7 @@ public class SignServiceImpl implements SignService {
 ```
 
 * SignController
+
 ```java
 @RestController
 @RequestMapping("/sign-api")
@@ -565,6 +567,7 @@ public class SignController {
 }
 ```
 * PasswordEncoderConfiguration
+
 ```java
 @Configuration
 public class PasswordEncoderConfiguration {
@@ -609,6 +612,7 @@ public class User {
 ```
 
 * 그 외에 사용한 DTO들
+
 ```java
 @Getter
 @AllArgsConstructor
