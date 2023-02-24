@@ -1,7 +1,7 @@
 ---
 title: "[CS] OS: 멀티 프로세싱과 멀티 스레딩"
 author: TaemHam
-date: 2023-02-20 09:00:00 +0900
+date: 2023-02-23 09:00:00 +0900
 categories: [CS, OS]
 tags: [CS, OS, Multiprocess, Multithread, CriticalSection, Semaphore, Mutex, Deadlock]
 ---
