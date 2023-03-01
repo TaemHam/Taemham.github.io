@@ -3,7 +3,7 @@ title: "[CS] DB: DB란 무엇인가?"
 author: TaemHam
 date: 2023-02-25 09:00:00 +0900
 categories: [CS, DB]
-tags: [CS, DB, SchedulingAlgorithm, Starvation, Aging]
+tags: [CS, DB, Entity, Attribute]
 ---
 
 ![](https://www.lifewire.com/thmb/BWi9I4ScLwYav9G0eOusrQ1ja8I=/1500x0/filters:no_upscale():max_bytes(150000):strip_icc()/database-157334670-5c29939d46e0fb0001edf766-f2f4c8e9293e4eef9607abf61d6a5446.jpg)
