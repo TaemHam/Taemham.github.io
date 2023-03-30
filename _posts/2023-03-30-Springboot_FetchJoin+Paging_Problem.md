@@ -14,76 +14,82 @@ tags: [CS, DB, N+1, Fetch Join, OneToMany]
 
 <details>
 <summary>게시글 엔티티</summary>
+<div markdown="1"> 
 
-    ```java
-    @Builder
-    @Getter
-    @AllArgsConstructor
-    @NoArgsConstructor
-    @Entity
-    public class Post {
+```java
+@Builder
+@Getter
+@AllArgsConstructor
+@NoArgsConstructor
+@Entity
+public class Post {
 
-        @Id
-        @GeneratedValue(strategy = GenerationType.IDENTITY)
-        private long id;
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private long id;
 
-        @Column
-        private String title;
+    @Column
+    private String title;
 
-        @Column
-        private String content;
+    @Column
+    private String content;
 
-        @OneToMany(mappedBy = "post")
-        private final List<Comment> comments = new ArrayList<>();
+    @OneToMany(mappedBy = "post")
+    private final List<Comment> comments = new ArrayList<>();
 
-        public void addComment(Comment comment) {
-            comments.add(comment);
-        }
+    public void addComment(Comment comment) {
+        comments.add(comment);
     }
-    ```
+}
+```
 
+</div> 
 </details>
 
 
 <details>
 <summary>댓글 엔티티</summary>
+<div markdown="1"> 
 
-    ```java
-    @Builder
-    @Getter
-    @AllArgsConstructor
-    @NoArgsConstructor
-    @Entity
-    public class Comment {
+```java
+@Builder
+@Getter
+@AllArgsConstructor
+@NoArgsConstructor
+@Entity
+public class Comment {
 
-        @Id
-        @GeneratedValue(strategy = GenerationType.IDENTITY)
-        private long id;
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private long id;
 
-        @Column
-        private String content;
+    @Column
+    private String content;
 
-        @ManyToOne
-        @JoinColumn(name = "post_id")
-        private Post post;
-    }
-    ```
+    @ManyToOne
+    @JoinColumn(name = "post_id")
+    private Post post;
+}
+```
 
+</div>
 </details>
 
 
 <details>
 <summary>게시글 리포지토리</summary>
+<div markdown="1"> 
 
-    ```java
-    public interface PostRepository extends JpaRepository<Post, Long> {
+```java
+public interface PostRepository extends JpaRepository<Post, Long> {
 
-        @Query(value = "SELECT DISTINCT p FROM Post p JOIN FETCH p.comments WHERE p.content LIKE %:content%",
-                countQuery = "SELECT COUNT(DISTINCT p) FROM Post p INNER JOIN p.comments WHERE p.content LIKE %:content%")
-        Page<Post> findByContentWithFetchJoin(String content, Pageable pageable);
-    }
-    ```
+    @Query(value = "SELECT DISTINCT p FROM Post p JOIN FETCH p.comments WHERE p.content LIKE %:content%",
+            countQuery = "SELECT COUNT(DISTINCT p) FROM Post p INNER JOIN p.comments WHERE p.content LIKE %:content%")
+    Page<Post> findByContentWithFetchJoin(String content, Pageable pageable);
+}
+```
 
+</div>
 </details>
 
 
@@ -113,29 +119,34 @@ Fetch Join이 아닌 Batch Size 를 설정해 N+1 문제를 해결하고, 쿼리
 
 <details>
 <summary>application.yaml</summary>
+<div markdown="1"> 
 
-    ```yml
-    spring:
-    jpa:
-        properties:
-        hibernate:
-            default_batch_fetch_size: 1000
-    ```
+```yml
+spring:
+jpa:
+    properties:
+    hibernate:
+        default_batch_fetch_size: 1000
+```
 
+</div>
 </details>
 
 <details>
 <summary>게시글 리포지토리</summary>
+<div markdown="1"> 
 
-    ```java
-    public interface PostRepository extends JpaRepository<Post, Long> {
+```java
+public interface PostRepository extends JpaRepository<Post, Long> {
 
-        @Query(value = "SELECT p FROM Post p WHERE p.content LIKE %:content%",
-                countQuery = "SELECT COUNT(p) FROM Post p WHERE p.content LIKE %:content%")
-        Page<Post> findByContentLike(String content, Pageable pageable);
-    }
-    ```
+    @Query(value = "SELECT p FROM Post p WHERE p.content LIKE %:content%",
+            countQuery = "SELECT COUNT(p) FROM Post p WHERE p.content LIKE %:content%")
+    Page<Post> findByContentLike(String content, Pageable pageable);
+}
+```
 
+
+</div> 
 </details>
 
 위와 같이 수정 한 후 쿼리문을 찾아보니, WARN 로그 없이 `fetch first ? rows only` 가 출력되는 것을 확인했다.
